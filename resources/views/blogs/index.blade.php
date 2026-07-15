@@ -1,64 +1,190 @@
-<x-guest-layout>
+<x-app-layout>
+
+    <x-slot name="header">
+        <h2 class="text-xl font-semibold">
+            Manage Blogs
+        </h2>
+    </x-slot>
+
     <div class="p-8">
-        <div class="mb-6">
-            <a href="{{ route('blogs.create') }}" class="border border-blue-600 bg-blue-600 text-white p-2 rounded-lg">Create Blog</a>
-            @if (session('success'))
-                <div style="background:#d4edda; padding:12px; border-radius:4px; margin:12px 0; color:#155724;">
-                    {{ session('success') }}
-                </div>
-            @endif
+
+        <div class="mb-6 flex items-center justify-between">
+
+            <div>
+                <h1 class="text-2xl font-bold">
+                    Blog Management
+                </h1>
+
+                <p class="text-gray-600">
+                    Create and manage blog posts.
+                </p>
+            </div>
+
+            <a href="{{ route('blogs.create') }}"
+                class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                Create Blog
+            </a>
+
         </div>
-            <div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">
-                <table class="w-full text-sm text-left rtl:text-right text-body">
-                    <thead class="text-sm text-body bg-neutral-secondary-soft border-b rounded-base border-default">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 font-medium">
-                                Id
-                            </th>
-                            <th scope="col" class="px-6 py-3 font-medium">
-                                Image
-                            </th>
-                            <th scope="col" class="px-6 py-3 font-medium">
-                                Title
-                            </th>
-                            <th scope="col" class="px-6 py-3 font-medium">
-                                Content
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($blog as $blogs)
-                            <tr class="bg-neutral-primary border-b border-default">
-                                <th scope="row" class="px-6 py-4 font-medium text-heading whitespace-nowrap">
-                                    {{ $blogs->id }}
-                                </th>
-                                <td class="px-6 py-4">
-                                    <img class="" src="{{ asset('images/' . $blogs->image) }}" alt="{{ $blogs->title }}" class="w-16 h-16 object-cover">
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $blogs->title }}
-                                </td>
-                                <td class="px-6 py-4">
-                                    {{ $blogs->content }}
-                                </td>
-                                <td class="px-6 py-4 flex gap-2">
-                                    <a href="{{ route('blogs.edit', $blogs->id) }}" class="border border-blue-600 p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Edit</a>
-                                    <form action="{{ route('blogs.destroy', $blogs->id) }}" method="POST"
-                                        onsubmit="return confirm('Are you sure you want to delete this blog?')">
+
+        @if (session('success'))
+            <div class="mb-4 rounded bg-green-100 p-3 text-green-700">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        <div class="overflow-x-auto rounded border bg-white shadow">
+
+            <table class="w-full text-left text-sm">
+
+                <thead class="border-b bg-gray-100">
+                    <tr>
+                        <th class="px-5 py-3">Image</th>
+                        <th class="px-5 py-3">Title</th>
+                        <th class="px-5 py-3">Author</th>
+                        <th class="px-5 py-3">Status</th>
+                        <th class="px-5 py-3">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    @forelse ($blogs as $blog)
+
+                        <tr class="border-b">
+
+                            <td class="px-5 py-4">
+                                <img
+                                    src="{{ asset('images/' . $blog->image) }}"
+                                    alt="{{ $blog->title }}"
+                                    class="h-16 w-16 rounded object-cover">
+                            </td>
+
+                            <td class="px-5 py-4">
+                                <p class="font-semibold">
+                                    {{ $blog->title }}
+                                </p>
+
+                                <p class="text-gray-500">
+                                    {{ \Illuminate\Support\Str::limit($blog->content, 60) }}
+                                </p>
+                            </td>
+
+                            <td class="px-5 py-4">
+                                {{ $blog->user?->name ?? 'Unknown' }}
+                            </td>
+
+                            <td class="px-5 py-4">
+
+                                @if ($blog->status === 'approved')
+
+                                    <span class="rounded bg-green-100 px-3 py-1 text-green-700">
+                                        Approved
+                                    </span>
+
+                                @elseif ($blog->status === 'rejected')
+
+                                    <span class="rounded bg-red-100 px-3 py-1 text-red-700">
+                                        Rejected
+                                    </span>
+
+                                @else
+
+                                    <span class="rounded bg-yellow-100 px-3 py-1 text-yellow-700">
+                                        Pending
+                                    </span>
+
+                                @endif
+
+                            </td>
+
+                            <td class="px-5 py-4">
+
+                                <div class="flex flex-wrap gap-2">
+
+                                    <a href="{{ route('blogs.edit', $blog) }}"
+                                        class="rounded bg-yellow-500 px-3 py-2 text-white hover:bg-yellow-600">
+                                        Edit
+                                    </a>
+
+                                    <form action="{{ route('blogs.destroy', $blog) }}"
+                                        method="POST">
+
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="submit"
-                                            class="border border-red-600 p-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+                                        <button
+                                            type="submit"
+                                            class="rounded bg-red-600 px-3 py-2 text-white hover:bg-red-700"
+                                            onclick="return confirm('Are you sure you want to delete this blog?')">
                                             Delete
                                         </button>
+
                                     </form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+
+                                    @role('admin')
+
+                                        @if ($blog->status !== 'approved')
+
+                                            <form action="{{ route('blogs.approve', $blog) }}"
+                                                method="POST">
+
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <button
+                                                    type="submit"
+                                                    class="rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700">
+                                                    Approve
+                                                </button>
+
+                                            </form>
+
+                                        @endif
+
+                                        @if ($blog->status !== 'rejected')
+
+                                            <form action="{{ route('blogs.reject', $blog) }}"
+                                                method="POST">
+
+                                                @csrf
+                                                @method('PATCH')
+
+                                                <button
+                                                    type="submit"
+                                                    class="rounded bg-gray-700 px-3 py-2 text-white hover:bg-gray-800">
+                                                    Reject
+                                                </button>
+
+                                            </form>
+
+                                        @endif
+
+                                    @endrole
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    @empty
+
+                        <tr>
+                            <td colspan="5"
+                                class="px-5 py-8 text-center text-gray-500">
+                                No blogs found.
+                            </td>
+                        </tr>
+
+                    @endforelse
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </div>
-</x-guest-layout>
+
+</x-app-layout>
