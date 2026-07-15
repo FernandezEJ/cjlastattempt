@@ -1,7 +1,12 @@
 <x-guest-layout>
     <div class="p-8">
         <div class="mb-6">
-            <a href="{{ route('blogs.create') }}" class="">Create Blog</a>
+            <a href="{{ route('blogs.create') }}" class="border border-blue-600 bg-blue-600 text-white p-2 rounded-lg">Create Blog</a>
+            @if (session('success'))
+                <div style="background:#d4edda; padding:12px; border-radius:4px; margin:12px 0; color:#155724;">
+                    {{ session('success') }}
+                </div>
+            @endif
         </div>
             <div class="relative overflow-x-auto bg-neutral-primary-soft shadow-xs rounded-base border border-default">
                 <table class="w-full text-sm text-left rtl:text-right text-body">
@@ -38,10 +43,15 @@
                                 </td>
                                 <td class="px-6 py-4 flex gap-2">
                                     <a href="{{ route('blogs.edit', $blogs->id) }}" class="border border-blue-600 p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Edit</a>
-                                    <form action="{{ route('blogs.destroy', $blogs->id) }}" method="POST">
+                                    <form action="{{ route('blogs.destroy', $blogs->id) }}" method="POST"
+                                        onsubmit="return confirm('Are you sure you want to delete this blog?')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="border border-red-600 p-2 rounded-lg bg-red-600 text-white hover:bg-red-700">Delete</button>
+
+                                        <button type="submit"
+                                            class="border border-red-600 p-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+                                            Delete
+                                        </button>
                                     </form>
                                 </td>
                             </tr>

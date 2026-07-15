@@ -70,21 +70,26 @@ class BlogController extends Controller
     public function update(Request $request, Blog $blog)
     {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'title' => 'required|string|max:255',
             'content' => 'required|string',
         ]);
 
-        $image = $request->file('image');
-        $imageName = time() . '.' . $image->getClientOriginalExtension();
-        $image->move(public_path('images'), $imageName);
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('images'), $imageName);
 
-        $blog->image = $imageName;
+            $blog->image = $imageName;
+        }
+
         $blog->title = $request->title;
         $blog->content = $request->content;
+
         $blog->save();
 
-        return redirect()->route('blogs.index');
+        return redirect()->route('blogs.index')
+            ->with('success', 'Blog updated successfully.');
     }
 
     /**
@@ -93,6 +98,7 @@ class BlogController extends Controller
     public function destroy(Blog $blog)
     {
         $blog->delete();
-        return redirect()->route('blogs.index');
+        return redirect()->route('blogs.index')
+            ->with('success', 'Blog deleted successfully.');
     }
 }
