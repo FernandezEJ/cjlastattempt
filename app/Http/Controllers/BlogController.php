@@ -3,41 +3,64 @@
 namespace App\Http\Controllers;
 
 use App\Models\Blog;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BlogController extends Controller
 {
-    /**
-     * Show approved blogs on the public homepage.
-     */
-    public function home()
+    public function home(Request $request)
     {
-        $blogs = Blog::with('user')
-            ->where('status', 'approved')
-            ->latest()
-            ->get();
+        $query = Blog::with(['user', 'categoryData'])
+            ->withCount(['likes', 'comments'])
+            ->where('status', 'approved');
 
-        return view('welcome', compact('blogs'));
+        // Search by title or author.
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($blogQuery) use ($search) {
+                $blogQuery
+                    ->where('title', 'like', '%' . $search . '%')
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where(
+                            'name',
+                            'like',
+                            '%' . $search . '%'
+                        );
+                    });
+            });
+        }
+
+        // Filter by category.
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        $categories = Category::orderBy('name')->get();
+
+        $blogs = $query
+            ->latest()
+            ->paginate(8)
+            ->withQueryString();
+
+        return view('welcome', compact('blogs', 'categories'));
     }
 
-    /**
-     * Show the blog management page.
-     */
     public function index()
     {
         /** @var User $user */
         $user = Auth::user();
 
         if ($user->hasRole('admin')) {
-            // Admin can see all blogs.
-            $blogs = Blog::with('user')
+            $blogs = Blog::with(['user', 'categoryData'])
+                ->withCount(['likes', 'comments'])
                 ->latest()
                 ->get();
         } else {
-            // Author can only see their own blogs.
-            $blogs = Blog::with('user')
+            $blogs = Blog::with(['user', 'categoryData'])
+                ->withCount(['likes', 'comments'])
                 ->where('user_id', $user->id)
                 ->latest()
                 ->get();
@@ -46,40 +69,46 @@ class BlogController extends Controller
         return view('blogs.index', compact('blogs'));
     }
 
-    /**
-     * Show the create-blog form.
-     */
     public function create()
     {
-        return view('blogs.create');
+        $categories = Category::orderBy('name')->get();
+
+        return view('blogs.create', compact('categories'));
     }
 
-    /**
-     * Save a new blog.
-     */
     public function store(Request $request)
     {
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'title' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
             'content' => 'required|string',
         ]);
+
+        if (trim(strip_tags($request->content)) === '') {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'content' => 'The blog content is required.',
+                ]);
+        }
 
         /** @var User $user */
         $user = Auth::user();
 
         $image = $request->file('image');
-
         $imageName = time() . '.' . $image->getClientOriginalExtension();
 
         $image->move(public_path('images'), $imageName);
 
         $blog = new Blog();
         $blog->user_id = $user->id;
+        $blog->category_id = $request->category_id;
         $blog->image = $imageName;
         $blog->title = $request->title;
         $blog->content = $request->content;
         $blog->status = 'pending';
+        $blog->views = 0;
         $blog->save();
 
         return redirect()->route('blogs.index')
@@ -89,31 +118,51 @@ class BlogController extends Controller
             );
     }
 
-    /**
-     * Show one approved blog.
-     */
     public function show(Blog $blog)
     {
         if ($blog->status !== 'approved') {
             abort(404);
         }
 
-        return view('blogs.show', compact('blog'));
+        $blog->increment('views');
+
+        $blog->load([
+            'user',
+            'categoryData',
+            'comments.user',
+        ]);
+
+        $blog->loadCount([
+            'likes',
+            'comments',
+        ]);
+
+        $userHasLiked = false;
+
+        if (Auth::check()) {
+            $userHasLiked = $blog->likes()
+                ->where('user_id', Auth::id())
+                ->exists();
+        }
+
+        return view('blogs.show', compact(
+            'blog',
+            'userHasLiked'
+        ));
     }
 
-    /**
-     * Show the edit-blog form.
-     */
     public function edit(Blog $blog)
     {
         $this->checkBlogAccess($blog);
 
-        return view('blogs.edit', compact('blog'));
+        $categories = Category::orderBy('name')->get();
+
+        return view('blogs.edit', compact(
+            'blog',
+            'categories'
+        ));
     }
 
-    /**
-     * Update a blog.
-     */
     public function update(Request $request, Blog $blog)
     {
         $this->checkBlogAccess($blog);
@@ -121,12 +170,20 @@ class BlogController extends Controller
         $request->validate([
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'title' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
             'content' => 'required|string',
         ]);
 
+        if (trim(strip_tags($request->content)) === '') {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'content' => 'The blog content is required.',
+                ]);
+        }
+
         if ($request->hasFile('image')) {
             $image = $request->file('image');
-
             $imageName = time() . '.' . $image->getClientOriginalExtension();
 
             $image->move(public_path('images'), $imageName);
@@ -135,13 +192,12 @@ class BlogController extends Controller
         }
 
         $blog->title = $request->title;
+        $blog->category_id = $request->category_id;
         $blog->content = $request->content;
 
         /** @var User $user */
         $user = Auth::user();
 
-        // When an author edits a blog,
-        // the blog needs admin approval again.
         if ($user->hasRole('author')) {
             $blog->status = 'pending';
         }
@@ -152,9 +208,6 @@ class BlogController extends Controller
             ->with('success', 'Blog updated successfully.');
     }
 
-    /**
-     * Delete a blog.
-     */
     public function destroy(Blog $blog)
     {
         $this->checkBlogAccess($blog);
@@ -165,10 +218,6 @@ class BlogController extends Controller
             ->with('success', 'Blog deleted successfully.');
     }
 
-    /**
-     * Approve a blog.
-     * Admin only.
-     */
     public function approve(Blog $blog)
     {
         $blog->status = 'approved';
@@ -178,10 +227,6 @@ class BlogController extends Controller
             ->with('success', 'Blog approved successfully.');
     }
 
-    /**
-     * Reject a blog.
-     * Admin only.
-     */
     public function reject(Blog $blog)
     {
         $blog->status = 'rejected';
@@ -191,10 +236,6 @@ class BlogController extends Controller
             ->with('success', 'Blog rejected successfully.');
     }
 
-    /**
-     * Admin can manage all blogs.
-     * Authors can only manage their own blogs.
-     */
     private function checkBlogAccess(Blog $blog)
     {
         /** @var User $user */

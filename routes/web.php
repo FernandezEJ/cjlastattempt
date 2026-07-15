@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\BlogController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LikeController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -20,10 +24,31 @@ Route::get('/blogs/{blog}/view', [BlogController::class, 'show'])
 // ======================
 // DASHBOARD
 // ======================
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+// ======================
+// LIKE AND COMMENT
+// LOGGED-IN USERS
+// ======================
+Route::middleware('auth')->group(function () {
+
+    Route::post(
+        '/blogs/{blog}/like',
+        [LikeController::class, 'toggle']
+    )->name('blogs.like');
+
+    Route::post(
+        '/blogs/{blog}/comments',
+        [CommentController::class, 'store']
+    )->name('comments.store');
+
+    Route::delete(
+        '/comments/{comment}',
+        [CommentController::class, 'destroy']
+    )->name('comments.destroy');
+});
 
 // ======================
 // ADMIN AND AUTHOR ONLY
@@ -54,17 +79,46 @@ Route::middleware(['auth', 'role:admin|author'])->group(function () {
 // ======================
 Route::middleware(['auth', 'role:admin'])->group(function () {
 
-    Route::patch('/blogs/{blog}/approve', [BlogController::class, 'approve'])
-        ->name('blogs.approve');
+    // Blog approval
+    Route::patch(
+        '/blogs/{blog}/approve',
+        [BlogController::class, 'approve']
+    )->name('blogs.approve');
 
-    Route::patch('/blogs/{blog}/reject', [BlogController::class, 'reject'])
-        ->name('blogs.reject');
+    Route::patch(
+        '/blogs/{blog}/reject',
+        [BlogController::class, 'reject']
+    )->name('blogs.reject');
 
+    // User management
     Route::get('/users', [UserController::class, 'index'])
         ->name('users.index');
 
-    Route::patch('/users/{user}/role', [UserController::class, 'updateRole'])
-        ->name('users.updateRole');
+    Route::patch(
+        '/users/{user}/role',
+        [UserController::class, 'updateRole']
+    )->name('users.updateRole');
+
+    // Category management
+    Route::get(
+        '/categories',
+        [CategoryController::class, 'index']
+    )->name('categories.index');
+
+    Route::post(
+        '/categories',
+        [CategoryController::class, 'store']
+    )->name('categories.store');
+
+    Route::put(
+        '/categories/{category}',
+        [CategoryController::class, 'update']
+    )->name('categories.update');
+
+    Route::delete(
+        '/categories/{category}',
+        [CategoryController::class, 'destroy']
+    )->name('categories.destroy');
 });
 
 // ======================
@@ -72,14 +126,20 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 // ======================
 Route::middleware('auth')->group(function () {
 
-    Route::get('/profile', [ProfileController::class, 'edit'])
-        ->name('profile.edit');
+    Route::get(
+        '/profile',
+        [ProfileController::class, 'edit']
+    )->name('profile.edit');
 
-    Route::patch('/profile', [ProfileController::class, 'update'])
-        ->name('profile.update');
+    Route::patch(
+        '/profile',
+        [ProfileController::class, 'update']
+    )->name('profile.update');
 
-    Route::delete('/profile', [ProfileController::class, 'destroy'])
-        ->name('profile.destroy');
+    Route::delete(
+        '/profile',
+        [ProfileController::class, 'destroy']
+    )->name('profile.destroy');
 });
 
 require __DIR__ . '/auth.php';

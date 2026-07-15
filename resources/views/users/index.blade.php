@@ -1,10 +1,17 @@
 <x-app-layout>
 
-    <x-slot name="header">
+     <x-slot name="header">
+    <div class="flex items-center justify-between">
         <h2 class="text-xl font-semibold">
             Manage Users
         </h2>
-    </x-slot>
+        <a
+            href="{{ route('dashboard') }}"
+            class="rounded bg-gray-600 px-4 py-2 text-white hover:bg-gray-700">
+            Back to Dashboard
+        </a>
+    </div>
+</x-slot>
 
     <div class="p-8">
 
