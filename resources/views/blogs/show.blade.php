@@ -4,6 +4,10 @@
         href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css"
         rel="stylesheet">
 
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+
     <div class="mx-auto max-w-4xl p-8">
 
         <a
@@ -41,22 +45,34 @@
                 </a>
             @endif
 
-            {{-- Counts --}}
-            <div class="mt-5 flex flex-wrap gap-5 text-sm text-gray-600">
+            {{-- Blog content --}}
+            <div class="ql-snow mt-6">
 
-                <span>
-                    👁 {{ $blog->views }} views
-                </span>
-
-                <span>
-                    ❤️ {{ $blog->likes_count }} likes
-                </span>
-
-                <span>
-                    💬 {{ $blog->comments_count }} comments
-                </span>
+                <div class="ql-editor p-0 text-lg leading-relaxed border border-gray-300 bg-white">
+                    {!! $blog->content !!}
+                </div>
 
             </div>
+
+            {{-- Counts --}}
+                    <div class="mt-5 flex items-center gap-6 text-gray-600">
+
+                        <span class="flex items-center gap-1">
+                            <div class="text-lg">{{ $blog->views }}</div>
+                            <i class="bi bi-eye-fill text-blue-600 text-base"></i>
+                        </span>
+
+                        <span class="flex items-center gap-1">
+                            <div class="text-lg">{{ $blog->likes_count }}</div>
+                            <i class="bi bi-heart-fill text-red-600"></i>
+                        </span>
+
+                        <span class="flex items-center gap-1">
+                            <div class="text-lg">{{ $blog->comments_count }}</div>
+                            <i class="bi bi-chat-left-text-fill text-green-600"></i>
+                        </span>
+
+                    </div>
 
             {{-- Like button --}}
             <div class="mt-5">
@@ -101,15 +117,6 @@
                     </p>
 
                 @endauth
-
-            </div>
-
-            {{-- Blog content --}}
-            <div class="ql-snow mt-6">
-
-                <div class="ql-editor p-0 text-lg leading-relaxed">
-                    {!! $blog->content !!}
-                </div>
 
             </div>
 
